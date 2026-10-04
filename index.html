@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Patch Wheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEF8; --surface:#FFFFFF; --ink:#1A2347; --muted:#5A6488;
+  --navy:#22357A; --gold:#ffdb8e; --flame:#f8c0a6; --felt:#55a87b; --sky:#68b5f8;
+  --tile-hidden:#22357A; --tile-shown:#FFF8E6; --tile-ink:#1A2347; --line:#CBD3EA;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  font-family:"Baloo 2", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111833; --surface:#1B2547; --ink:#EEF1FA; --muted:#A6AFD0;
+    --tile-hidden:#2E4396; --tile-shown:#FFF4D8; --line:#2E3A66;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111833; --surface:#1B2547; --ink:#EEF1FA; --muted:#A6AFD0;
+  --tile-hidden:#2E4396; --tile-shown:#FFF4D8; --line:#2E3A66;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.4}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:16px clamp(12px,3vw,28px) 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+h1{margin:0;font-size:clamp(1.6rem,4vw,2.3rem);font-weight:800;letter-spacing:-.01em;color:var(--navy)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) h1{color:var(--gold)}}
+:root[data-theme="dark"] h1{color:var(--gold)}
+.ghost{background:transparent;border:2px solid var(--line);color:var(--ink);border-radius:999px;padding:4px 16px;font-weight:600}
+.ghost:hover{border-color:var(--muted)}
+
+/* Board */
+.board-shell{background:var(--navy);border-radius:22px;padding:18px 14px;border:4px dashed rgba(255,255,255,.28);box-shadow:inset 0 0 0 6px var(--navy)}
+.board-meta{display:flex;justify-content:space-between;color:#C9D3F5;font-weight:600;font-size:.95rem;margin:0 4px 10px}
+#board{display:flex;flex-wrap:wrap;justify-content:center;gap:10px calc(var(--tile,48px) * .6);min-height:80px;align-items:center}
+.word{display:flex;gap:4px}
+.tile{width:var(--tile,48px);height:calc(var(--tile,48px)*1.22);border-radius:6px;display:grid;place-items:center;
+  font-weight:800;font-size:calc(var(--tile,48px)*.66);line-height:1;background:var(--tile-shown);color:var(--tile-ink);
+  box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.tile.hidden{background:#fff;color:transparent;box-shadow:0 3px 0 rgba(0,0,0,.25), inset 0 0 0 3px #DDE4F7}
+.tile.punct{background:transparent;color:#fff;box-shadow:none;width:auto;min-width:calc(var(--tile,48px)*.4)}
+.tile.pop{animation:pop .5s ease-out}
+@keyframes pop{0%{transform:rotateY(90deg);background:var(--gold)}60%{background:var(--gold)}100%{transform:rotateY(0)}}
+
+/* Main play area */
+.play{display:grid;grid-template-columns:minmax(260px,430px) 1fr;gap:clamp(16px,3vw,36px);margin-top:20px;align-items:start}
+@media (max-width:760px){.play{grid-template-columns:1fr}}
+.wheel-box{position:relative;width:100%;max-width:430px;margin:0 auto;aspect-ratio:1}
+#wheel{width:100%;height:100%;display:block}
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;
+  border-left:18px solid transparent;border-right:18px solid transparent;border-top:34px solid var(--flame);
+  filter:drop-shadow(0 2px 1px rgba(0,0,0,.3));z-index:2}
+#spinBtn{position:absolute;inset:0;margin:auto;width:24%;height:24%;border-radius:50%;border:5px solid var(--gold);
+  background:var(--navy);color:#fff;font-weight:800;font-size:clamp(.9rem,2.6vw,1.25rem);z-index:3}
+#spinBtn:disabled{opacity:.65;cursor:not-allowed}
+#spinBtn:not(:disabled):hover{background:var(--flame)}
+
+.side{display:flex;flex-direction:column;gap:14px}
+.status{background:var(--surface);border-radius:16px;padding:14px 18px;border:2px solid var(--line)}
+.turn{font-size:.95rem;color:var(--muted);font-weight:600}
+#msg{font-size:clamp(1.15rem,2.4vw,1.45rem);font-weight:700;margin-top:2px;min-height:2.2em}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.act{border:none;border-radius:12px;padding:8px 16px;font-weight:700;color:#fff;background:var(--felt)}
+.act.vowel{background:var(--sky)}
+.act.solve{background:var(--flame)}
+.act.quiet{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.act:disabled{opacity:.4;cursor:not-allowed}
+.act.on{outline:3px solid var(--gold)}
+.solve-row{display:none;gap:8px}
+.solve-row.show{display:flex}
+.solve-row input{flex:1;min-width:0;font:inherit;font-size:1.1rem;padding:6px 12px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink)}
+#keys{display:grid;grid-template-columns:repeat(9,1fr);gap:6px}
+.key{aspect-ratio:1;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-weight:800;font-size:1.15rem;padding:0}
+.key.v{border-color:var(--sky)}
+.key:disabled{opacity:.3;cursor:not-allowed}
+.key.used{text-decoration:line-through;opacity:.25}
+.key:not(:disabled):hover{background:var(--gold);color:#1A2347}
+
+/* Teams */
+#teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:26px}
+.team{background:var(--surface);border-radius:18px;padding:14px 16px;border:3px solid var(--line);transition:border-color .2s}
+.team.active{border-color:var(--flame)}
+.team h3{margin:0;font-size:1.25rem;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.team h3 small{font-size:.9rem;color:var(--muted);font-weight:600}
+.sash{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:30px}
+.patch{font-size:.85rem;font-weight:700;padding:2px 10px;border-radius:999px;color:#1A2347;border:2px dashed rgba(0,0,0,.35)}
+.empty{color:var(--muted);font-size:.9rem}
+
+dialog{border:none;border-radius:20px;padding:22px;max-width:min(560px,92vw);width:100%;background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(10,15,35,.6)}
+dialog h2{margin:0 0 6px}
+dialog label{display:block;font-weight:700;margin-top:12px}
+dialog .hint{font-weight:500;color:var(--muted);font-size:.9rem}
+dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+@media (prefers-reduced-motion: reduce){.tile.pop{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Patch Wheel</h1>
+    <button class="ghost" id="settingsBtn">Edit puzzles &amp; patches</button>
+  </header>
+
+  <section class="board-shell" aria-label="Puzzle board">
+    <div class="board-meta"><span id="puzzleNum">Puzzle 1 of 4</span><span id="usedLetters"></span></div>
+    <div id="board"></div>
+  </section>
+
+  <section class="play">
+    <div class="wheel-box">
+      <div class="pointer" aria-hidden="true"></div>
+      <canvas id="wheel" aria-label="Wheel of patches"></canvas>
+      <button id="spinBtn">Spin</button>
+    </div>
+
+    <div class="side">
+      <div class="status" aria-live="polite">
+        <div class="turn" id="turnLabel"></div>
+        <div id="msg"></div>
+      </div>
+      <div class="actions">
+        <button class="act vowel" id="vowelBtn">Buy a vowel (1 patch)</button>
+        <button class="act solve" id="solveBtn">Solve</button>
+        <button class="act quiet" id="passBtn">Pass turn</button>
+        <button class="act quiet" id="revealBtn">Reveal answer</button>
+        <button class="act" id="nextBtn">Next puzzle</button>
+      </div>
+      <div class="solve-row" id="solveRow">
+        <input id="solveInput" placeholder="Type the full answer" autocomplete="off">
+        <button class="act solve" id="solveGo">Check</button>
+      </div>
+      <div id="keys"></div>
+    </div>
+  </section>
+
+  <section id="teams" aria-label="Teams"></section>
+</div>
+
+<dialog id="settings">
+  <form method="dialog" id="settingsForm">
+    <h2>Edit game</h2>
+    <label>Puzzles <span class="hint">one per line</span>
+      <textarea id="puzzlesIn" rows="5"></textarea></label>
+    <label>Patches on the wheel <span class="hint">one per line</span>
+      <textarea id="patchesIn" rows="7"></textarea></label>
+    <label>Teams <span class="hint">one per line</span>
+      <textarea id="teamsIn" rows="3"></textarea></label>
+    <div class="dlg-actions">
+      <button class="act quiet" value="cancel" type="submit">Cancel</button>
+      <button class="act quiet" id="resetDefaults" type="button">Restore defaults</button>
+      <button class="act" value="save" type="submit">Save and restart</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const DEFAULTS = {
+  puzzles:["Guiding Light","Campfires","Five Point Programme","Sisters-In-Guiding", "International Guiding", "World Thinking Day", "Advocacy Projects", "Camp Christine" ,"Be Prepared", "Free Being Me", "Leave No Trace","Congratulations on Flying Up!" ],
+  patches:["Patch 1","Patch 2","Patch 3","Patch 4","Patch 5","Patch 6","Patch 7","Patch 8","Patch 9","Patch 10"],
+  teams:["Team 1","Team 2","Team 3", "Team 4"]
+};
+const KEY="patch-wheel-config";
+function loadCfg(){
+  try{const s=localStorage.getItem(KEY); if(s){const c=JSON.parse(s); if(c.puzzles?.length&&c.patches?.length&&c.teams?.length) return c;}}catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+function saveCfg(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
+
+let cfg=loadCfg();
+const VOWELS=new Set("AEIOU");
+const PATCH_COLORS=["#F2B632","#E8692E","#6FBF73","#5AA9EC","#B98CE0","#F27C9B","#4FC1B5","#F5D76E"];
+let segs=[],teams=[],cur=0,pIndex=0,used=new Set(),state="spin",currentPatch=null,rotation=0,justRevealed=null;
+
+const $=id=>document.getElementById(id);
+const wheel=$("wheel"),ctx=wheel.getContext("2d");
+const reduceMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function patchColor(name){const i=cfg.patches.indexOf(name);return PATCH_COLORS[(i<0?0:i)%PATCH_COLORS.length]}
+
+function buildSegments(){
+  const P=cfg.patches.map(p=>({type:"patch",label:p}));
+  const h=Math.ceil(P.length/2);
+  segs=[...P.slice(0,h),{type:"lose",label:"Lose a Turn"},...P.slice(h),{type:"bank",label:"Lose All Patches"}];
+}
+
+function drawWheel(){
+  const size=wheel.clientWidth, dpr=window.devicePixelRatio||1;
+  if(wheel.width!==Math.round(size*dpr)){wheel.width=Math.round(size*dpr);wheel.height=Math.round(size*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const r=size/2,n=segs.length,a=Math.PI*2/n;
+  ctx.clearRect(0,0,size,size);
+  ctx.save();ctx.translate(r,r);
+  // outer rim
+  ctx.beginPath();ctx.arc(0,0,r-2,0,Math.PI*2);ctx.fillStyle="#22357A";ctx.fill();
+  ctx.rotate(rotation);
+  let pi=0;
+  segs.forEach((s,i)=>{
+    let fill,ink="#1A2347";
+    if(s.type==="patch"){fill=PATCH_COLORS[pi++%PATCH_COLORS.length]}
+    else if(s.type==="lose"){fill="#FFFFFF"}
+    else {fill="#1A1A1A";ink="#FFFFFF"}
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r-12,i*a,(i+1)*a);ctx.closePath();
+    ctx.fillStyle=fill;ctx.fill();
+    ctx.strokeStyle="#22357A";ctx.lineWidth=2;ctx.stroke();
+    // stitched edge
+    ctx.beginPath();ctx.arc(0,0,r-20,i*a+0.03,(i+1)*a-0.03);
+    ctx.setLineDash([5,4]);ctx.strokeStyle=s.type==="bank"?"rgba(255,255,255,.5)":"rgba(0,0,0,.35)";ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);
+    // label
+    ctx.save();ctx.rotate(i*a+a/2);
+    let fs=Math.min(r*0.085,r*a*0.42);
+    ctx.font=`700 ${fs}px "Baloo 2", "Trebuchet MS", sans-serif`;
+    while(ctx.measureText(s.label).width>r*0.6&&fs>7){fs-=0.5;ctx.font=`700 ${fs}px "Baloo 2", "Trebuchet MS", sans-serif`}
+    ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillStyle=ink;
+    ctx.fillText(s.label,r-30,1);
+    ctx.restore();
+  });
+  ctx.restore();
+}
+
+function pointerIndex(rot){
+  const a=Math.PI*2/segs.length;
+  let ang=(-Math.PI/2-rot)%(Math.PI*2); if(ang<0)ang+=Math.PI*2;
+  return Math.floor(ang/a)%segs.length;
+}
+
+let audio=null;
+function tick(){
+  try{
+    if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();
+    const o=audio.createOscillator(),g=audio.createGain();
+    o.frequency.value=1100;g.gain.setValueAtTime(0.05,audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+0.04);
+    o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+0.05);
+  }catch(e){}
+}
+
+function spin(){
+  if(state!=="spin")return;
+  hideSolve();
+  state="spinning";update();
+  setMsg("Spinning…");
+  const n=segs.length,a=Math.PI*2/n,target=Math.floor(Math.random()*n);
+  const jitter=(Math.random()-0.5)*a*0.7;
+  const extra=(reduceMotion?1:5)*Math.PI*2;
+  let final=-Math.PI/2-(target+0.5)*a+jitter;
+  while(final<rotation+extra)final+=Math.PI*2;
+  const start=rotation,dur=reduceMotion?1200:4600,t0=performance.now();
+  let last=pointerIndex(rotation);
+  function frame(now){
+    const t=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-t,4);
+    rotation=start+(final-start)*e;drawWheel();
+    const pi=pointerIndex(rotation);if(pi!==last){last=pi;tick()}
+    if(t<1)requestAnimationFrame(frame);
+    else{rotation=rotation%(Math.PI*2);land(segs[pointerIndex(rotation)])}
+  }
+  requestAnimationFrame(frame);
+}
+
+function land(s){
+  const t=teams[cur];
+  if(s.type==="patch"){
+    currentPatch=s.label;state="consonant";
+    setMsg(`${t.name} landed on ${s.label}! Pick a consonant.`);
+  }else if(s.type==="lose"){
+    setMsg(`Lose a Turn! Over to ${teams[(cur+1)%teams.length].name}.`);
+    nextTeam();state="spin";
+  }else{
+    const lost=t.patches.length;t.patches=[];
+    setMsg(`Lose All Patches! ${t.name} drops ${lost} patch${lost===1?"":"es"}. Over to ${teams[(cur+1)%teams.length].name}.`);
+    nextTeam();state="spin";
+  }
+  update();
+}
+
+function puzzle(){return cfg.puzzles[pIndex].toUpperCase()}
+function countOf(L){return [...puzzle()].filter(c=>c===L).length}
+function allRevealed(){return [...puzzle()].every(c=>!/[A-Z]/.test(c)||used.has(c))}
+function consonantsLeft(){return [...new Set(puzzle())].some(c=>/[A-Z]/.test(c)&&!VOWELS.has(c)&&!used.has(c))}
+function vowelsLeft(){return [...new Set(puzzle())].some(c=>VOWELS.has(c)&&!used.has(c))}
+
+function guess(L){
+  if(used.has(L))return;
+  const isV=VOWELS.has(L),t=teams[cur];
+  if(state==="consonant"&&isV)return;
+  if(state==="vowel"&&!isV)return;
+  if(state!=="consonant"&&state!=="vowel")return;
+  used.add(L);justRevealed=L;
+  const n=countOf(L);
+  if(state==="vowel"){
+    t.patches.pop();
+    if(n>0)setMsg(`${n} ${L}${n>1?"s":""}! ${t.name} keeps going.`);
+    else{setMsg(`No ${L}. Over to ${teams[(cur+1)%teams.length].name}.`);nextTeam()}
+  }else{
+    if(n>0){
+      for(let i=0;i<n;i++)t.patches.push(currentPatch);
+      setMsg(`${n} ${L}${n>1?"s":""}! ${t.name} earns ${n>1?n+" × ":""}${currentPatch}. Spin again, buy a vowel or solve.`);
+    }else{setMsg(`No ${L}. Over to ${teams[(cur+1)%teams.length].name}.`);nextTeam()}
+  }
+  currentPatch=null;state="spin";
+  if(allRevealed())winRound(cur);
+  update();
+}
+
+function norm(s){return s.toUpperCase().replace(/[^A-Z]/g,"")}
+function trySolve(){
+  const v=$("solveInput").value;if(!v.trim())return;
+  if(norm(v)===norm(puzzle())){winRound(cur)}
+  else{setMsg(`Not quite. Over to ${teams[(cur+1)%teams.length].name}.`);nextTeam();state="spin"}
+  hideSolve();update();
+}
+function winRound(i){
+  [...puzzle()].forEach(c=>{if(/[A-Z]/.test(c))used.add(c)});
+  teams[i].wins++;state="solved";justRevealed="*";
+  setMsg(`${teams[i].name} solved it! 🎉`);
+}
+function reveal(){
+  [...puzzle()].forEach(c=>{if(/[A-Z]/.test(c))used.add(c)});
+  state="solved";justRevealed="*";setMsg(`The answer was: ${cfg.puzzles[pIndex]}`);hideSolve();update();
+}
+function nextPuzzle(){
+  pIndex=(pIndex+1)%cfg.puzzles.length;used=new Set();state="spin";currentPatch=null;justRevealed=null;
+  nextTeam();setMsg(`New puzzle! ${teams[cur].name}, spin the wheel.`);hideSolve();update();
+}
+function nextTeam(){cur=(cur+1)%teams.length}
+function hideSolve(){$("solveRow").classList.remove("show");$("solveInput").value=""}
+function setMsg(m){$("msg").textContent=m}
+
+function renderBoard(){
+  const b=$("board"),words=cfg.puzzles[pIndex].split(/\s+/);
+  const longest=Math.max(...words.map(w=>w.length));
+  const W=b.clientWidth||600;
+  const tile=Math.max(16,Math.min(56,Math.floor((W-(longest-1)*4)/longest)));
+  b.style.setProperty("--tile",tile+"px");
+  b.innerHTML="";
+  words.forEach(w=>{
+    const g=document.createElement("div");g.className="word";
+    [...w].forEach(ch=>{
+      const t=document.createElement("div"),U=ch.toUpperCase();
+      if(/[A-Z]/.test(U)){
+        if(used.has(U)){t.className="tile";t.textContent=U;if(justRevealed===U||justRevealed==="*")t.classList.add("pop")}
+        else{t.className="tile hidden";t.textContent="?"}
+      }else{t.className="tile punct";t.textContent=ch}
+      g.appendChild(t);
+    });
+    b.appendChild(g);
+  });
+  b.setAttribute("aria-label",state==="solved"?cfg.puzzles[pIndex]:"Hidden puzzle");
+  justRevealed=null;
+  $("puzzleNum").textContent=`Puzzle ${pIndex+1} of ${cfg.puzzles.length}`;
+  const u=[...used].sort().join(" ");
+  $("usedLetters").textContent=state==="solved"?"":(u?`Used: ${u}`:"");
+}
+
+function renderKeys(){
+  const k=$("keys");k.innerHTML="";
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(L=>{
+    const b=document.createElement("button");b.className="key"+(VOWELS.has(L)?" v":"");b.textContent=L;
+    const isV=VOWELS.has(L);
+    const can=!used.has(L)&&((state==="consonant"&&!isV)||(state==="vowel"&&isV));
+    b.disabled=!can;if(used.has(L))b.classList.add("used");
+    b.onclick=()=>guess(L);k.appendChild(b);
+  });
+}
+
+function renderTeams(){
+  const box=$("teams");box.innerHTML="";
+  teams.forEach((t,i)=>{
+    const d=document.createElement("div");d.className="team"+(i===cur&&state!=="solved"?" active":"");
+    const counts={};t.patches.forEach(p=>counts[p]=(counts[p]||0)+1);
+    const chips=Object.entries(counts).map(([p,c])=>`<span class="patch" style="background:${patchColor(p)}">${esc(p)}${c>1?" ×"+c:""}</span>`).join("");
+    d.innerHTML=`<h3>${esc(t.name)} <small>${t.patches.length} patch${t.patches.length===1?"":"es"}${t.wins?` · ${"★".repeat(t.wins)}`:""}</small></h3>
+      <div class="sash">${chips||'<span class="empty">No patches yet</span>'}</div>`;
+    box.appendChild(d);
+  });
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function update(){
+  const t=teams[cur],playing=state!=="solved";
+  $("turnLabel").textContent=playing?`${t.name}'s turn`:"Round over";
+  const noCons=!consonantsLeft();
+  $("spinBtn").disabled=state!=="spin"||noCons;
+  if(state==="spin"&&noCons&&playing&&!$("msg").textContent.includes("consonants"))setMsg($("msg").textContent+" No consonants left. Buy a vowel or solve.");
+  const vb=$("vowelBtn");
+  vb.disabled=!((state==="spin"||state==="vowel")&&t.patches.length>0&&vowelsLeft());
+  vb.classList.toggle("on",state==="vowel");
+  vb.textContent=state==="vowel"?"Cancel vowel":"Buy a vowel (1 patch)";
+  $("solveBtn").disabled=!(state==="spin");
+  $("passBtn").disabled=!(state==="spin");
+  $("revealBtn").disabled=!playing||state==="spinning";
+  $("nextBtn").disabled=state==="spinning";
+  renderBoard();renderKeys();renderTeams();
+}
+
+function newGame(){
+  buildSegments();
+  teams=cfg.teams.map(n=>({name:n,patches:[],wins:0}));
+  cur=0;pIndex=0;used=new Set();state="spin";currentPatch=null;rotation=0;
+  setMsg(`${teams[0].name}, spin the wheel!`);hideSolve();
+  drawWheel();update();
+}
+
+$("spinBtn").onclick=spin;
+$("vowelBtn").onclick=()=>{
+  if(state==="vowel"){state="spin";setMsg(`${teams[cur].name}, spin, buy a vowel or solve.`)}
+  else if(state==="spin"){state="vowel";setMsg(`Pick a vowel. It costs ${teams[cur].name} one patch.`)}
+  update();
+};
+$("solveBtn").onclick=()=>{$("solveRow").classList.add("show");$("solveInput").focus()};
+$("solveGo").onclick=trySolve;
+$("solveInput").addEventListener("keydown",e=>{if(e.key==="Enter")trySolve();if(e.key==="Escape")hideSolve()});
+$("passBtn").onclick=()=>{nextTeam();setMsg(`${teams[cur].name}, your turn. Spin the wheel!`);hideSolve();update()};
+$("revealBtn").onclick=reveal;
+$("nextBtn").onclick=nextPuzzle;
+
+document.addEventListener("keydown",e=>{
+  if(e.target.matches("input,textarea")||$("settings").open)return;
+  if(e.key===" "&&state==="spin"&&!$("spinBtn").disabled){e.preventDefault();spin();return}
+  const L=e.key.toUpperCase();if(/^[A-Z]$/.test(L))guess(L);
+});
+
+// Settings
+$("settingsBtn").onclick=()=>{
+  $("puzzlesIn").value=cfg.puzzles.join("\n");$("patchesIn").value=cfg.patches.join("\n");$("teamsIn").value=cfg.teams.join("\n");
+  $("settings").showModal();
+};
+$("resetDefaults").onclick=()=>{
+  $("puzzlesIn").value=DEFAULTS.puzzles.join("\n");$("patchesIn").value=DEFAULTS.patches.join("\n");$("teamsIn").value=DEFAULTS.teams.join("\n");
+};
+$("settings").addEventListener("close",()=>{
+  if($("settings").returnValue!=="save")return;
+  const lines=id=>$(id).value.split("\n").map(s=>s.trim()).filter(Boolean);
+  const pz=lines("puzzlesIn").filter(p=>/[A-Za-z]/.test(p)),pa=lines("patchesIn"),tm=lines("teamsIn");
+  if(pz.length)cfg.puzzles=pz; if(pa.length)cfg.patches=pa; if(tm.length)cfg.teams=tm;
+  saveCfg();newGame();
+});
+
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{drawWheel();renderBoard()},100)});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawWheel);
+newGame();
+</script>
+</body>
+</html>

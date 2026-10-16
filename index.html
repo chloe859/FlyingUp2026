@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Patch Wheel</title>
+<title>Points Wheel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -93,7 +93,7 @@ h1{margin:0;font-size:clamp(1.6rem,4vw,2.3rem);font-weight:800;letter-spacing:-.
 .team h3{margin:0;font-size:1.25rem;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .team h3 small{font-size:.9rem;color:var(--muted);font-weight:600}
 .sash{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:30px}
-.patch{font-size:.85rem;font-weight:700;padding:2px 10px;border-radius:999px;color:#1A2347;border:2px dashed rgba(0,0,0,.35)}
+.Points{font-size:.85rem;font-weight:700;padding:2px 10px;border-radius:999px;color:#1A2347;border:2px dashed rgba(0,0,0,.35)}
 .empty{color:var(--muted);font-size:.9rem}
 
 dialog{border:none;border-radius:20px;padding:22px;max-width:min(560px,92vw);width:100%;background:var(--surface);color:var(--ink)}
@@ -109,8 +109,8 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
 <body>
 <div class="wrap">
   <header>
-    <h1>Patch Wheel</h1>
-    <button class="ghost" id="settingsBtn">Edit puzzles &amp; patches</button>
+    <h1>Points Wheel</h1>
+    <button class="ghost" id="settingsBtn">Edit puzzles &amp; Pointses</button>
   </header>
 
   <section class="board-shell" aria-label="Puzzle board">
@@ -121,7 +121,7 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
   <section class="play">
     <div class="wheel-box">
       <div class="pointer" aria-hidden="true"></div>
-      <canvas id="wheel" aria-label="Wheel of patches"></canvas>
+      <canvas id="wheel" aria-label="Wheel of Pointses"></canvas>
       <button id="spinBtn">Spin</button>
     </div>
 
@@ -131,7 +131,7 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
         <div id="msg"></div>
       </div>
       <div class="actions">
-        <button class="act vowel" id="vowelBtn">Buy a vowel (1 patch)</button>
+        <button class="act vowel" id="vowelBtn">Buy a vowel (1 Points)</button>
         <button class="act solve" id="solveBtn">Solve</button>
         <button class="act quiet" id="passBtn">Pass turn</button>
         <button class="act quiet" id="revealBtn">Reveal answer</button>
@@ -153,8 +153,8 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
     <h2>Edit game</h2>
     <label>Puzzles <span class="hint">one per line</span>
       <textarea id="puzzlesIn" rows="5"></textarea></label>
-    <label>Patches on the wheel <span class="hint">one per line</span>
-      <textarea id="patchesIn" rows="7"></textarea></label>
+    <label>Pointses on the wheel <span class="hint">one per line</span>
+      <textarea id="PointsesIn" rows="7"></textarea></label>
     <label>Teams <span class="hint">one per line</span>
       <textarea id="teamsIn" rows="3"></textarea></label>
     <div class="dlg-actions">
@@ -168,31 +168,31 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
 <script>
 const DEFAULTS = {
   puzzles:["Guiding Light","Campfires","Five Point Programme","Sisters-In-Guiding", "International Guiding", "World Thinking Day", "Advocacy Projects", "Camp Christine" ,"Be Prepared", "Free Being Me", "Leave No Trace","Congratulations on Flying Up!" ],
-  patches:["Patch 1","Patch 2","Patch 3","Patch 4","Patch 5","Patch 6","Patch 7","Patch 8","Patch 9","Patch 10"],
+  Pointses:["Points 1","Points 2","Points 3","Points 4","Points 5","Points 6","Points 7","Points 8","Points 9","Points 10"],
   teams:["Team 1","Team 2","Team 3", "Team 4"]
 };
-const KEY="patch-wheel-config";
+const KEY="Points-wheel-config";
 function loadCfg(){
-  try{const s=localStorage.getItem(KEY); if(s){const c=JSON.parse(s); if(c.puzzles?.length&&c.patches?.length&&c.teams?.length) return c;}}catch(e){}
+  try{const s=localStorage.getItem(KEY); if(s){const c=JSON.parse(s); if(c.puzzles?.length&&c.Pointses?.length&&c.teams?.length) return c;}}catch(e){}
   return JSON.parse(JSON.stringify(DEFAULTS));
 }
 function saveCfg(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
 
 let cfg=loadCfg();
 const VOWELS=new Set("AEIOU");
-const PATCH_COLORS=["#F2B632","#E8692E","#6FBF73","#5AA9EC","#B98CE0","#F27C9B","#4FC1B5","#F5D76E"];
-let segs=[],teams=[],cur=0,pIndex=0,used=new Set(),state="spin",currentPatch=null,rotation=0,justRevealed=null;
+const Points_COLORS=["#F2B632","#E8692E","#6FBF73","#5AA9EC","#B98CE0","#F27C9B","#4FC1B5","#F5D76E"];
+let segs=[],teams=[],cur=0,pIndex=0,used=new Set(),state="spin",currentPoints=null,rotation=0,justRevealed=null;
 
 const $=id=>document.getElementById(id);
 const wheel=$("wheel"),ctx=wheel.getContext("2d");
 const reduceMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function patchColor(name){const i=cfg.patches.indexOf(name);return PATCH_COLORS[(i<0?0:i)%PATCH_COLORS.length]}
+function PointsColor(name){const i=cfg.Pointses.indexOf(name);return Points_COLORS[(i<0?0:i)%Points_COLORS.length]}
 
 function buildSegments(){
-  const P=cfg.patches.map(p=>({type:"patch",label:p}));
+  const P=cfg.Pointses.map(p=>({type:"Points",label:p}));
   const h=Math.ceil(P.length/2);
-  segs=[...P.slice(0,h),{type:"lose",label:"Lose a Turn"},...P.slice(h),{type:"bank",label:"Lose All Patches"}];
+  segs=[...P.slice(0,h),{type:"lose",label:"Lose a Turn"},...P.slice(h),{type:"bank",label:"Lose All Pointses"}];
 }
 
 function drawWheel(){
@@ -208,7 +208,7 @@ function drawWheel(){
   let pi=0;
   segs.forEach((s,i)=>{
     let fill,ink="#1A2347";
-    if(s.type==="patch"){fill=PATCH_COLORS[pi++%PATCH_COLORS.length]}
+    if(s.type==="Points"){fill=Points_COLORS[pi++%Points_COLORS.length]}
     else if(s.type==="lose"){fill="#FFFFFF"}
     else {fill="#1A1A1A";ink="#FFFFFF"}
     ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r-12,i*a,(i+1)*a);ctx.closePath();
@@ -270,15 +270,15 @@ function spin(){
 
 function land(s){
   const t=teams[cur];
-  if(s.type==="patch"){
-    currentPatch=s.label;state="consonant";
+  if(s.type==="Points"){
+    currentPoints=s.label;state="consonant";
     setMsg(`${t.name} landed on ${s.label}! Pick a consonant.`);
   }else if(s.type==="lose"){
     setMsg(`Lose a Turn! Over to ${teams[(cur+1)%teams.length].name}.`);
     nextTeam();state="spin";
   }else{
-    const lost=t.patches.length;t.patches=[];
-    setMsg(`Lose All Patches! ${t.name} drops ${lost} patch${lost===1?"":"es"}. Over to ${teams[(cur+1)%teams.length].name}.`);
+    const lost=t.Pointses.length;t.Pointses=[];
+    setMsg(`Lose All Pointses! ${t.name} drops ${lost} Points${lost===1?"":"es"}. Over to ${teams[(cur+1)%teams.length].name}.`);
     nextTeam();state="spin";
   }
   update();
@@ -299,16 +299,16 @@ function guess(L){
   used.add(L);justRevealed=L;
   const n=countOf(L);
   if(state==="vowel"){
-    t.patches.pop();
+    t.Pointses.pop();
     if(n>0)setMsg(`${n} ${L}${n>1?"s":""}! ${t.name} keeps going.`);
     else{setMsg(`No ${L}. Over to ${teams[(cur+1)%teams.length].name}.`);nextTeam()}
   }else{
     if(n>0){
-      for(let i=0;i<n;i++)t.patches.push(currentPatch);
-      setMsg(`${n} ${L}${n>1?"s":""}! ${t.name} earns ${n>1?n+" × ":""}${currentPatch}. Spin again, buy a vowel or solve.`);
+      for(let i=0;i<n;i++)t.Pointses.push(currentPoints);
+      setMsg(`${n} ${L}${n>1?"s":""}! ${t.name} earns ${n>1?n+" × ":""}${currentPoints}. Spin again, buy a vowel or solve.`);
     }else{setMsg(`No ${L}. Over to ${teams[(cur+1)%teams.length].name}.`);nextTeam()}
   }
-  currentPatch=null;state="spin";
+  currentPoints=null;state="spin";
   if(allRevealed())winRound(cur);
   update();
 }
@@ -330,7 +330,7 @@ function reveal(){
   state="solved";justRevealed="*";setMsg(`The answer was: ${cfg.puzzles[pIndex]}`);hideSolve();update();
 }
 function nextPuzzle(){
-  pIndex=(pIndex+1)%cfg.puzzles.length;used=new Set();state="spin";currentPatch=null;justRevealed=null;
+  pIndex=(pIndex+1)%cfg.puzzles.length;used=new Set();state="spin";currentPoints=null;justRevealed=null;
   nextTeam();setMsg(`New puzzle! ${teams[cur].name}, spin the wheel.`);hideSolve();update();
 }
 function nextTeam(){cur=(cur+1)%teams.length}
@@ -378,10 +378,10 @@ function renderTeams(){
   const box=$("teams");box.innerHTML="";
   teams.forEach((t,i)=>{
     const d=document.createElement("div");d.className="team"+(i===cur&&state!=="solved"?" active":"");
-    const counts={};t.patches.forEach(p=>counts[p]=(counts[p]||0)+1);
-    const chips=Object.entries(counts).map(([p,c])=>`<span class="patch" style="background:${patchColor(p)}">${esc(p)}${c>1?" ×"+c:""}</span>`).join("");
-    d.innerHTML=`<h3>${esc(t.name)} <small>${t.patches.length} patch${t.patches.length===1?"":"es"}${t.wins?` · ${"★".repeat(t.wins)}`:""}</small></h3>
-      <div class="sash">${chips||'<span class="empty">No patches yet</span>'}</div>`;
+    const counts={};t.Pointses.forEach(p=>counts[p]=(counts[p]||0)+1);
+    const chips=Object.entries(counts).map(([p,c])=>`<span class="Points" style="background:${PointsColor(p)}">${esc(p)}${c>1?" ×"+c:""}</span>`).join("");
+    d.innerHTML=`<h3>${esc(t.name)} <small>${t.Pointses.length} Points${t.Pointses.length===1?"":"es"}${t.wins?` · ${"★".repeat(t.wins)}`:""}</small></h3>
+      <div class="sash">${chips||'<span class="empty">No Pointses yet</span>'}</div>`;
     box.appendChild(d);
   });
 }
@@ -394,9 +394,9 @@ function update(){
   $("spinBtn").disabled=state!=="spin"||noCons;
   if(state==="spin"&&noCons&&playing&&!$("msg").textContent.includes("consonants"))setMsg($("msg").textContent+" No consonants left. Buy a vowel or solve.");
   const vb=$("vowelBtn");
-  vb.disabled=!((state==="spin"||state==="vowel")&&t.patches.length>0&&vowelsLeft());
+  vb.disabled=!((state==="spin"||state==="vowel")&&t.Pointses.length>0&&vowelsLeft());
   vb.classList.toggle("on",state==="vowel");
-  vb.textContent=state==="vowel"?"Cancel vowel":"Buy a vowel (1 patch)";
+  vb.textContent=state==="vowel"?"Cancel vowel":"Buy a vowel (1 Points)";
   $("solveBtn").disabled=!(state==="spin");
   $("passBtn").disabled=!(state==="spin");
   $("revealBtn").disabled=!playing||state==="spinning";
@@ -406,8 +406,8 @@ function update(){
 
 function newGame(){
   buildSegments();
-  teams=cfg.teams.map(n=>({name:n,patches:[],wins:0}));
-  cur=0;pIndex=0;used=new Set();state="spin";currentPatch=null;rotation=0;
+  teams=cfg.teams.map(n=>({name:n,Pointses:[],wins:0}));
+  cur=0;pIndex=0;used=new Set();state="spin";currentPoints=null;rotation=0;
   setMsg(`${teams[0].name}, spin the wheel!`);hideSolve();
   drawWheel();update();
 }
@@ -415,7 +415,7 @@ function newGame(){
 $("spinBtn").onclick=spin;
 $("vowelBtn").onclick=()=>{
   if(state==="vowel"){state="spin";setMsg(`${teams[cur].name}, spin, buy a vowel or solve.`)}
-  else if(state==="spin"){state="vowel";setMsg(`Pick a vowel. It costs ${teams[cur].name} one patch.`)}
+  else if(state==="spin"){state="vowel";setMsg(`Pick a vowel. It costs ${teams[cur].name} one Points.`)}
   update();
 };
 $("solveBtn").onclick=()=>{$("solveRow").classList.add("show");$("solveInput").focus()};
@@ -433,17 +433,17 @@ document.addEventListener("keydown",e=>{
 
 // Settings
 $("settingsBtn").onclick=()=>{
-  $("puzzlesIn").value=cfg.puzzles.join("\n");$("patchesIn").value=cfg.patches.join("\n");$("teamsIn").value=cfg.teams.join("\n");
+  $("puzzlesIn").value=cfg.puzzles.join("\n");$("PointsesIn").value=cfg.Pointses.join("\n");$("teamsIn").value=cfg.teams.join("\n");
   $("settings").showModal();
 };
 $("resetDefaults").onclick=()=>{
-  $("puzzlesIn").value=DEFAULTS.puzzles.join("\n");$("patchesIn").value=DEFAULTS.patches.join("\n");$("teamsIn").value=DEFAULTS.teams.join("\n");
+  $("puzzlesIn").value=DEFAULTS.puzzles.join("\n");$("PointsesIn").value=DEFAULTS.Pointses.join("\n");$("teamsIn").value=DEFAULTS.teams.join("\n");
 };
 $("settings").addEventListener("close",()=>{
   if($("settings").returnValue!=="save")return;
   const lines=id=>$(id).value.split("\n").map(s=>s.trim()).filter(Boolean);
-  const pz=lines("puzzlesIn").filter(p=>/[A-Za-z]/.test(p)),pa=lines("patchesIn"),tm=lines("teamsIn");
-  if(pz.length)cfg.puzzles=pz; if(pa.length)cfg.patches=pa; if(tm.length)cfg.teams=tm;
+  const pz=lines("puzzlesIn").filter(p=>/[A-Za-z]/.test(p)),pa=lines("PointsesIn"),tm=lines("teamsIn");
+  if(pz.length)cfg.puzzles=pz; if(pa.length)cfg.Pointses=pa; if(tm.length)cfg.teams=tm;
   saveCfg();newGame();
 });
 

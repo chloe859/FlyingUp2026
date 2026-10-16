@@ -380,7 +380,7 @@ function renderTeams(){
     const d=document.createElement("div");d.className="team"+(i===cur&&state!=="solved"?" active":"");
     const counts={};t.Points.forEach(p=>counts[p]=(counts[p]||0)+1);
     const chips=Object.entries(counts).map(([p,c])=>`<span class="Points" style="background:${PointsColor(p)}">${esc(p)}${c>1?" ×"+c:""}</span>`).join("");
-    d.innerHTML=`<h3>${esc(t.name)} <small>${t.Points.length} Points${t.Points.length===1?"":"es"}${t.wins?` · ${"★".repeat(t.wins)}`:""}</small></h3>
+    d.innerHTML=`<h3>${esc(t.name)} <small>${t.Points.length} point${t.Points.length===1?"":"s"}${t.wins?` · ${"★".repeat(t.wins)}`:""}</small></h3>
       <div class="sash">${chips||'<span class="empty">No Points yet</span>'}</div>`;
     box.appendChild(d);
   });

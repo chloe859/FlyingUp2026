@@ -110,7 +110,7 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
 <div class="wrap">
   <header>
     <h1>Points Wheel</h1>
-    <button class="ghost" id="settingsBtn">Edit puzzles &amp; Pointses</button>
+    <button class="ghost" id="settingsBtn">Edit puzzles &amp; Points</button>
   </header>
 
   <section class="board-shell" aria-label="Puzzle board">
@@ -121,7 +121,7 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
   <section class="play">
     <div class="wheel-box">
       <div class="pointer" aria-hidden="true"></div>
-      <canvas id="wheel" aria-label="Wheel of Pointses"></canvas>
+      <canvas id="wheel" aria-label="Wheel of Points"></canvas>
       <button id="spinBtn">Spin</button>
     </div>
 
@@ -153,8 +153,8 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
     <h2>Edit game</h2>
     <label>Puzzles <span class="hint">one per line</span>
       <textarea id="puzzlesIn" rows="5"></textarea></label>
-    <label>Pointses on the wheel <span class="hint">one per line</span>
-      <textarea id="PointsesIn" rows="7"></textarea></label>
+    <label>Points on the wheel <span class="hint">one per line</span>
+      <textarea id="PointsIn" rows="7"></textarea></label>
     <label>Teams <span class="hint">one per line</span>
       <textarea id="teamsIn" rows="3"></textarea></label>
     <div class="dlg-actions">
@@ -167,13 +167,13 @@ dialog textarea{width:100%;font:inherit;font-size:1rem;padding:8px 10px;border-r
 
 <script>
 const DEFAULTS = {
-  puzzles:["Guiding Light","Campfires","Five Point Programme","Sisters-In-Guiding", "International Guiding", "World Thinking Day", "Advocacy Projects", "Camp Christine" ,"Be Prepared", "Free Being Me", "Leave No Trace","Congratulations on Flying Up!" ],
-  Pointses:["Points 1","Points 2","Points 3","Points 4","Points 5","Points 6","Points 7","Points 8","Points 9","Points 10"],
+  puzzles:["Five Point Programme", "International Guiding","Advocacy Projects", "Camp Christine" ,"Congratulations on Flying Up!" ],
+  Points:["Points 1","Points 2","Points 3","Points 4","Points 5","Points 6","Points 7","Points 8","Points 9","Points 10"],
   teams:["Team 1","Team 2","Team 3", "Team 4"]
 };
 const KEY="Points-wheel-config";
 function loadCfg(){
-  try{const s=localStorage.getItem(KEY); if(s){const c=JSON.parse(s); if(c.puzzles?.length&&c.Pointses?.length&&c.teams?.length) return c;}}catch(e){}
+  try{const s=localStorage.getItem(KEY); if(s){const c=JSON.parse(s); if(c.puzzles?.length&&c.Points?.length&&c.teams?.length) return c;}}catch(e){}
   return JSON.parse(JSON.stringify(DEFAULTS));
 }
 function saveCfg(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
@@ -187,12 +187,12 @@ const $=id=>document.getElementById(id);
 const wheel=$("wheel"),ctx=wheel.getContext("2d");
 const reduceMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function PointsColor(name){const i=cfg.Pointses.indexOf(name);return Points_COLORS[(i<0?0:i)%Points_COLORS.length]}
+function PointsColor(name){const i=cfg.Points.indexOf(name);return Points_COLORS[(i<0?0:i)%Points_COLORS.length]}
 
 function buildSegments(){
-  const P=cfg.Pointses.map(p=>({type:"Points",label:p}));
+  const P=cfg.Points.map(p=>({type:"Points",label:p}));
   const h=Math.ceil(P.length/2);
-  segs=[...P.slice(0,h),{type:"lose",label:"Lose a Turn"},...P.slice(h),{type:"bank",label:"Lose All Pointses"}];
+  segs=[...P.slice(0,h),{type:"lose",label:"Lose a Turn"},...P.slice(h),{type:"bank",label:"Lose All Points"}];
 }
 
 function drawWheel(){
@@ -277,8 +277,8 @@ function land(s){
     setMsg(`Lose a Turn! Over to ${teams[(cur+1)%teams.length].name}.`);
     nextTeam();state="spin";
   }else{
-    const lost=t.Pointses.length;t.Pointses=[];
-    setMsg(`Lose All Pointses! ${t.name} drops ${lost} Points${lost===1?"":"es"}. Over to ${teams[(cur+1)%teams.length].name}.`);
+    const lost=t.Points.length;t.Points=[];
+    setMsg(`Lose All Points! ${t.name} drops ${lost} Points${lost===1?"":"es"}. Over to ${teams[(cur+1)%teams.length].name}.`);
     nextTeam();state="spin";
   }
   update();
@@ -299,12 +299,12 @@ function guess(L){
   used.add(L);justRevealed=L;
   const n=countOf(L);
   if(state==="vowel"){
-    t.Pointses.pop();
+    t.Points.pop();
     if(n>0)setMsg(`${n} ${L}${n>1?"s":""}! ${t.name} keeps going.`);
     else{setMsg(`No ${L}. Over to ${teams[(cur+1)%teams.length].name}.`);nextTeam()}
   }else{
     if(n>0){
-      for(let i=0;i<n;i++)t.Pointses.push(currentPoints);
+      for(let i=0;i<n;i++)t.Points.push(currentPoints);
       setMsg(`${n} ${L}${n>1?"s":""}! ${t.name} earns ${n>1?n+" × ":""}${currentPoints}. Spin again, buy a vowel or solve.`);
     }else{setMsg(`No ${L}. Over to ${teams[(cur+1)%teams.length].name}.`);nextTeam()}
   }
@@ -378,10 +378,10 @@ function renderTeams(){
   const box=$("teams");box.innerHTML="";
   teams.forEach((t,i)=>{
     const d=document.createElement("div");d.className="team"+(i===cur&&state!=="solved"?" active":"");
-    const counts={};t.Pointses.forEach(p=>counts[p]=(counts[p]||0)+1);
+    const counts={};t.Points.forEach(p=>counts[p]=(counts[p]||0)+1);
     const chips=Object.entries(counts).map(([p,c])=>`<span class="Points" style="background:${PointsColor(p)}">${esc(p)}${c>1?" ×"+c:""}</span>`).join("");
-    d.innerHTML=`<h3>${esc(t.name)} <small>${t.Pointses.length} Points${t.Pointses.length===1?"":"es"}${t.wins?` · ${"★".repeat(t.wins)}`:""}</small></h3>
-      <div class="sash">${chips||'<span class="empty">No Pointses yet</span>'}</div>`;
+    d.innerHTML=`<h3>${esc(t.name)} <small>${t.Points.length} Points${t.Points.length===1?"":"es"}${t.wins?` · ${"★".repeat(t.wins)}`:""}</small></h3>
+      <div class="sash">${chips||'<span class="empty">No Points yet</span>'}</div>`;
     box.appendChild(d);
   });
 }
@@ -394,7 +394,7 @@ function update(){
   $("spinBtn").disabled=state!=="spin"||noCons;
   if(state==="spin"&&noCons&&playing&&!$("msg").textContent.includes("consonants"))setMsg($("msg").textContent+" No consonants left. Buy a vowel or solve.");
   const vb=$("vowelBtn");
-  vb.disabled=!((state==="spin"||state==="vowel")&&t.Pointses.length>0&&vowelsLeft());
+  vb.disabled=!((state==="spin"||state==="vowel")&&t.Points.length>0&&vowelsLeft());
   vb.classList.toggle("on",state==="vowel");
   vb.textContent=state==="vowel"?"Cancel vowel":"Buy a vowel (1 Points)";
   $("solveBtn").disabled=!(state==="spin");
@@ -406,7 +406,7 @@ function update(){
 
 function newGame(){
   buildSegments();
-  teams=cfg.teams.map(n=>({name:n,Pointses:[],wins:0}));
+  teams=cfg.teams.map(n=>({name:n,Points:[],wins:0}));
   cur=0;pIndex=0;used=new Set();state="spin";currentPoints=null;rotation=0;
   setMsg(`${teams[0].name}, spin the wheel!`);hideSolve();
   drawWheel();update();
@@ -433,17 +433,17 @@ document.addEventListener("keydown",e=>{
 
 // Settings
 $("settingsBtn").onclick=()=>{
-  $("puzzlesIn").value=cfg.puzzles.join("\n");$("PointsesIn").value=cfg.Pointses.join("\n");$("teamsIn").value=cfg.teams.join("\n");
+  $("puzzlesIn").value=cfg.puzzles.join("\n");$("PointsIn").value=cfg.Points.join("\n");$("teamsIn").value=cfg.teams.join("\n");
   $("settings").showModal();
 };
 $("resetDefaults").onclick=()=>{
-  $("puzzlesIn").value=DEFAULTS.puzzles.join("\n");$("PointsesIn").value=DEFAULTS.Pointses.join("\n");$("teamsIn").value=DEFAULTS.teams.join("\n");
+  $("puzzlesIn").value=DEFAULTS.puzzles.join("\n");$("PointsIn").value=DEFAULTS.Points.join("\n");$("teamsIn").value=DEFAULTS.teams.join("\n");
 };
 $("settings").addEventListener("close",()=>{
   if($("settings").returnValue!=="save")return;
   const lines=id=>$(id).value.split("\n").map(s=>s.trim()).filter(Boolean);
-  const pz=lines("puzzlesIn").filter(p=>/[A-Za-z]/.test(p)),pa=lines("PointsesIn"),tm=lines("teamsIn");
-  if(pz.length)cfg.puzzles=pz; if(pa.length)cfg.Pointses=pa; if(tm.length)cfg.teams=tm;
+  const pz=lines("puzzlesIn").filter(p=>/[A-Za-z]/.test(p)),pa=lines("PointsIn"),tm=lines("teamsIn");
+  if(pz.length)cfg.puzzles=pz; if(pa.length)cfg.Points=pa; if(tm.length)cfg.teams=tm;
   saveCfg();newGame();
 });
 
